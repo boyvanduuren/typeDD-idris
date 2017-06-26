@@ -35,7 +35,7 @@ evaluate (Mult x y) = evaluate x * evaluate y
 
 {-5-}
 maxMaybe : Ord a => Maybe a -> Maybe a -> Maybe a
-maxMaybe Nothing Nothing = ?maxMaybe_rhs_3
+maxMaybe Nothing Nothing = Nothing
 maxMaybe Nothing (Just x) = Just x
 maxMaybe (Just x) Nothing = Just x
 maxMaybe (Just x) (Just y) = case compare x y of
@@ -61,6 +61,14 @@ data Picture = Primitive Shape
 biggestTriangle : Picture -> Maybe Double
 biggestTriangle (Primitive t@(Triangle x y)) = Just (area t)
 biggestTriangle (Primitive _) = Nothing
-biggestTriangle (Combine x y) = ?biggestTriangle_rhs_2
-biggestTriangle (Rotate x y) = ?biggestTriangle_rhs_3
-biggestTriangle (Translate x y z) = ?biggestTriangle_rhs_4
+biggestTriangle (Combine pict pict1) =
+  maxMaybe (biggestTriangle pict) (biggestTriangle pict1)
+biggestTriangle (Rotate _ pict) = biggestTriangle pict
+biggestTriangle (Translate _ _ pict) = biggestTriangle pict
+
+testPic1 : Picture
+testPic1 = Combine (Primitive (Triangle 2 3))
+                   (Primitive (Triangle 2 4))
+testPic2 : Picture
+testPic2 = Combine (Primitive (Rectangle 1 3))
+                   (Primitive (Circle 4))
