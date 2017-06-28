@@ -26,8 +26,19 @@ getEntry pos store = let store_items = items store in
                                      Nothing => Just ("Out of range\n", store)
                                      (Just x) => Just (index x store_items ++ "\n", store))
 
+{-2,3-}
+search : Nat -> String -> Vect n String -> String
+search idx x [] = ""
+search idx x (y :: xs) = case isInfixOf x y of
+                              False => "" ++ search (S idx) x xs
+                              True => show idx ++ ": " ++ y ++ "\n" ++
+                                      search (S idx) x xs
+{-end-}
+
 data Command = Add String
              | Get Integer
+             | Search String
+             | Size
              | Quit
 
 parseCommand : (cmd : String) -> (args : String) -> Maybe Command
@@ -35,6 +46,8 @@ parseCommand "add" str = Just (Add str)
 parseCommand "get" val = case all isDigit (unpack val) of
                               False => Nothing
                               True => Just (Get (cast val))
+parseCommand "search" str = Just (Search str)
+parseCommand "size" _ = Just Size
 parseCommand "quit" _ = Just Quit
 parseCommand _ _ = Nothing
 
@@ -48,6 +61,9 @@ processInput store input = case parse input of
                                 (Just (Add x)) => Just ("ID " ++ show (size store) ++ "\n",
                                                        (addToStore store x))
                                 (Just (Get x)) => getEntry x store
+                                (Just Size) => Just (show (size store) ++ "\n", store)
+                                (Just (Search x)) =>
+                                  Just (search 0 x (items store), store)
                                 (Just Quit) => Nothing
 
 main : IO ()
