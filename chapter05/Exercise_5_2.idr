@@ -28,3 +28,34 @@ randomGuess : IO ()
 randomGuess = do
   t <- time
   guess 0 (cast (t `mod` 101))
+
+{-4-}
+||| Test function for ownRepl
+test : String -> String
+test x = let maybeHead : Maybe String = listToMaybe (words x) in
+         case maybeHead of
+           Nothing => ""
+           Just s => s
+
+||| Test function for ownReplWith
+test2 : String -> String -> Maybe (String, String)
+test2 _ "z" = Nothing
+test2 x y = let new = x ++ y in
+  Just (new, new)
+
+ownRepl : (prompt : String) -> (onInput : String -> String) -> IO ()
+ownRepl prompt onInput = do
+  putStr prompt
+  input <- getLine
+  putStr (onInput input)
+  ownRepl prompt onInput
+
+ownReplWith : (state : a) -> (prompt : String) ->
+              (onInput : a -> String -> Maybe (String, a)) -> IO ()
+ownReplWith state prompt onInput = do
+  putStr prompt
+  input <- getLine
+  case onInput state input of
+    Nothing => pure ()
+    Just (out, newState) => do putStr out
+                               ownReplWith newState prompt onInput
