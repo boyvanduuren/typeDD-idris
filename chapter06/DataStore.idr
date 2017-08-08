@@ -34,39 +34,71 @@ addToStore (MkData schema size items) newItem = MkData schema _ (addToData items
     addToData [] = [newItem]
     addToData (x :: xs) = x :: addToData xs
 
+display : SchemaType schema -> String
+display {schema = SString} item = item
+display {schema = SInt} item = show item
+display {schema = (x .+. y)} (iteml, itemr) = display iteml ++ ", " ++ display itemr
+
 getEntry : (pos : Integer) -> (store : DataStore) -> Maybe (String, DataStore)
 getEntry pos store = let store_items = items store in
                                (case integerToFin pos (size store) of
                                      Nothing => Just ("Out of range\n", store)
-                                     (Just x) => Just (?display (index x store_items) ++ "\n", store))
+                                     (Just x) => Just (display (index x store_items) ++ "\n", store))
 
-data Command = Add String
-             | Get Integer
-             | Search String
-             | Size
-             | Quit
 
-parseCommand : (cmd : String) -> (args : String) -> Maybe Command
-parseCommand "add" str = Just (Add str)
-parseCommand "get" val = case all isDigit (unpack val) of
+data Command : Schema -> Type where
+  SetSchema : Schema -> Command schema
+  Add : SchemaType schema -> Command schema
+  Get : Integer -> Command schema
+  Quit : Command schema
+
+parsePrefix : (schema : Schema) -> String -> Maybe (SchemaType schema, String)
+parsePrefix SString input = getQuoted (unpack input)
+  where
+    getQuoted : List Char -> Maybe (String, String)
+    getQuoted ('"' :: xs) = case span (/= '"') xs of
+                                 (quoted, '"' :: rest) => Just (pack quoted, ltrim (pack rest))
+                                 _ => Nothing
+    getQuoted _ = Nothing
+parsePrefix SInt input = case span isDigit input of
+                              ("", rest) => Nothing
+                              (num, rest) => Just (cast num, ltrim rest)
+parsePrefix (schemal .+. schemar) input = case parsePrefix schemal input of
+                                               Nothing => Nothing
+                                               Just (l_val, input') =>
+                                                case parsePrefix schemar input' of
+                                                  Nothing => Nothing
+                                                  Just (r_val, input'') =>
+                                                    Just ((l_val, r_val), input'')
+
+parseBySchema : (schema : Schema) -> String -> Maybe (SchemaType schema)
+parseBySchema schema input = case parsePrefix schema input of
+                                  Nothing => Nothing
+                                  (Just (res, "")) => Just res
+                                  Just _ => Nothing
+
+parseCommand : (schema : Schema) -> (cmd : String) -> (args : String) ->
+  Maybe (Command schema)
+parseCommand schema "add" rest = case parseBySchema schema rest of
+                                      Nothing => Nothing
+                                      (Just rest_ok) => Just (Add rest_ok)
+parseCommand schema "get" val = case all isDigit (unpack val) of
                               False => Nothing
                               True => Just (Get (cast val))
-parseCommand "search" str = Just (Search str)
-parseCommand "size" _ = Just Size
-parseCommand "quit" _ = Just Quit
-parseCommand _ _ = Nothing
+parseCommand schema "quit" _ = Just Quit
+parseCommand _ _ _ = Nothing
 
-parse : (input: String) -> Maybe Command
-parse input = case span (/= ' ') input of
-                   (cmd, args) => parseCommand cmd (ltrim args)
+parse : (schema : Schema) -> (input: String) -> Maybe (Command schema)
+parse schema input = case span (/= ' ') input of
+                   (cmd, args) => parseCommand schema cmd (ltrim args)
 
 processInput : DataStore -> String -> Maybe (String, DataStore)
-processInput store input = case parse input of
+processInput store input = case parse (schema store) input of
                                 Nothing => Just ("Invalid command\n", store)
                                 (Just (Add x)) => Just ("ID " ++ show (size store) ++ "\n",
-                                                       (addToStore store (?convert x)))
+                                                       (addToStore store x))
                                 (Just (Get x)) => getEntry x store
-                                (Just Size) => Just (show (size store) ++ "\n", store)
-                                (Just (Search x)) =>
-                                  Just (search 0 x (items store), store)
                                 (Just Quit) => Nothing
+
+main : IO ()
+main = replWith (MkData (SString .+. SString .+. SInt) _ []) "Command: " processInput
