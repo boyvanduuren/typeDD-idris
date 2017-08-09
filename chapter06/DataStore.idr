@@ -77,8 +77,29 @@ parseBySchema schema input = case parsePrefix schema input of
                                   (Just (res, "")) => Just res
                                   Just _ => Nothing
 
+parseSchema : List String -> Maybe Schema
+parseSchema ("String" :: xs) = case xs of
+                                    [] => Just SString
+                                    _ => case parseSchema xs of
+                                      Nothing => Nothing
+                                      Just xs_schema => Just (SString .+. xs_schema)
+parseSchema ("Int" :: xs) = case xs of
+                                    [] => Just SInt
+                                    _ => case parseSchema xs of
+                                      Nothing => Nothing
+                                      Just xs_schema => Just (SInt .+. xs_schema)
+parseSchema _ = Nothing
+
+setSchema : (store : DataStore) -> Schema -> Maybe DataStore
+setSchema store schema = case size store of
+                              Z => Just (MkData schema _ [])
+                              (S k) => Nothing
+
 parseCommand : (schema : Schema) -> (cmd : String) -> (args : String) ->
   Maybe (Command schema)
+parseCommand _ "schema" rest = case parseSchema (words rest) of
+                                    Nothing => Nothing
+                                    (Just schema) => Just (SetSchema schema)
 parseCommand schema "add" rest = case parseBySchema schema rest of
                                       Nothing => Nothing
                                       (Just rest_ok) => Just (Add rest_ok)
@@ -95,6 +116,9 @@ parse schema input = case span (/= ' ') input of
 processInput : DataStore -> String -> Maybe (String, DataStore)
 processInput store input = case parse (schema store) input of
                                 Nothing => Just ("Invalid command\n", store)
+                                (Just (SetSchema schema')) => (case setSchema store schema' of
+                                                                    Nothing => Just ("Can't create new schema in non-empty datastore\n", store)
+                                                                    (Just store') => Just ("New schema created\n", store'))
                                 (Just (Add x)) => Just ("ID " ++ show (size store) ++ "\n",
                                                        (addToStore store x))
                                 (Just (Get x)) => getEntry x store
