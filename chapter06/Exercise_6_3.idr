@@ -48,11 +48,14 @@ getEntry pos store = let store_items = items store in
                                      Nothing => Just ("Out of range\n", store)
                                      (Just x) => Just (display (index x store_items) ++ "\n", store))
 
+allEntries : Nat -> Vect size (SchemaType schema) -> String
+allEntries (S k) (x :: xs) = (allEntries k xs) ++ (show k) ++ ": " ++ (display x) ++ "\n"
+allEntries _ _ = ""
 
 data Command : Schema -> Type where
   SetSchema : Schema -> Command schema
   Add : SchemaType schema -> Command schema
-  Get : Integer -> Command schema
+  Get : Maybe Integer -> Command schema
   Quit : Command schema
 
 parsePrefix : (schema : Schema) -> String -> Maybe (SchemaType schema, String)
@@ -116,9 +119,10 @@ parseCommand _ "schema" rest = case parseSchema (words rest) of
 parseCommand schema "add" rest = case parseBySchema schema rest of
                                       Nothing => Nothing
                                       (Just rest_ok) => Just (Add rest_ok)
+parseCommand schema "get" "" = Just (Get Nothing)
 parseCommand schema "get" val = case all isDigit (unpack val) of
                               False => Nothing
-                              True => Just (Get (cast val))
+                              True => Just (Get (Just (cast val)))
 parseCommand schema "quit" _ = Just Quit
 parseCommand _ _ _ = Nothing
 
@@ -134,7 +138,8 @@ processInput store input = case parse (schema store) input of
                                                                     (Just store') => Just ("New schema created\n", store'))
                                 (Just (Add x)) => Just ("ID " ++ show (size store) ++ "\n",
                                                        (addToStore store x))
-                                (Just (Get x)) => getEntry x store
+                                (Just (Get Nothing)) => Just (allEntries (size store) (items store), store)
+                                (Just (Get (Just x))) => getEntry x store
                                 (Just Quit) => Nothing
 
 main : IO ()
