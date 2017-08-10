@@ -49,7 +49,7 @@ getEntry pos store = let store_items = items store in
                                      (Just x) => Just (display (index x store_items) ++ "\n", store))
 
 allEntries : Nat -> Vect size (SchemaType schema) -> String
-allEntries (S k) (x :: xs) = (allEntries k xs) ++ (show k) ++ ": " ++ (display x) ++ "\n"
+allEntries k (x :: xs) = (allEntries (S k) xs) ++ (show k) ++ ": " ++ (display x) ++ "\n"
 allEntries _ _ = ""
 
 data Command : Schema -> Type where
@@ -129,7 +129,7 @@ processInput store input = case parse (schema store) input of
                                                                     (Just store') => Just ("New schema created\n", store'))
                                 (Just (Add x)) => Just ("ID " ++ show (size store) ++ "\n",
                                                        (addToStore store x))
-                                (Just (Get Nothing)) => Just (allEntries (size store) (items store), store)
+                                (Just (Get Nothing)) => Just (allEntries 0 (items store), store)
                                 (Just (Get (Just x))) => getEntry x store
                                 (Just Quit) => Nothing
 
