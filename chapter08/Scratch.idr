@@ -16,6 +16,22 @@ checkEqNat (S k) (S j) = case checkEqNat k j of
                               Nothing => Nothing
                               Just eq => Just (sameS _ _ eq)
 
+checkEqNat' : (num1 : Nat) -> (num2 : Nat) -> Maybe (EqNat num1 num2)
+checkEqNat' Z Z = Just (Same 0)
+checkEqNat' Z (S k) = Nothing
+checkEqNat' (S k) Z = Nothing
+checkEqNat' (S k) (S j) = (case checkEqNat' k j of
+                                Nothing => Nothing
+                                Just (Same j) => Just (Same (S j)))
+
+checkEqNat'' : (num1 : Nat) -> (num2 : Nat) -> Maybe (EqNat num1 num2)
+checkEqNat'' Z Z = Just (Same 0)
+checkEqNat'' Z (S k) = Nothing
+checkEqNat'' (S k) Z = Nothing
+checkEqNat'' (S k) (S j) = do
+    Same j <- checkEqNat'' k j
+    Just (Same (S j))
+                            
 exactLength : (len : Nat) -> (input : Vect m a) -> Maybe (Vect len a)
 exactLength {m} len input = case checkEqNat m len of
                                  Nothing => Nothing
