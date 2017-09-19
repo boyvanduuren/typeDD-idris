@@ -36,3 +36,11 @@ exactLength : (len : Nat) -> (input : Vect m a) -> Maybe (Vect len a)
 exactLength {m} len input = case checkEqNat m len of
                                  Nothing => Nothing
                                  Just (Same len) => Just input
+
+checkEqNatRefl : (num1 : Nat) -> (num2 : Nat) -> Maybe (num1 = num2)
+checkEqNatRefl Z Z = Just Refl
+checkEqNatRefl Z (S k) = Nothing
+checkEqNatRefl (S k) Z = Nothing
+checkEqNatRefl (S k) (S j) = case checkEqNatRefl k j of
+                                  Nothing => Nothing
+                                  (Just x) => Just (cong x)
