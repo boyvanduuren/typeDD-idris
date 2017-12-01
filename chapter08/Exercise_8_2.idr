@@ -1,3 +1,5 @@
+import Data.Vect
+
 {- 1 -}
 
 {-
@@ -28,3 +30,26 @@ Prove "n+m = m+n"
 myPlusCommutes : (n : Nat) -> (m : Nat) -> n + m = m + n
 myPlusCommutes Z m = plus_commutes_Z
 myPlusCommutes (S k) m = plus_commutes_S k m
+
+{- 2 -}
+
+{-
+"n = n+0" proof given by `plusZeroRightNeutral`, which can be used to prove
+"Vect n a = Vect (n + 0) a".
+-}
+reverseProof_nil : (acc : Vect n a) -> Vect (plus n 0) a
+reverseProof_nil {n} acc = rewrite plusZeroRightNeutral n in acc
+
+{-
+"(S n) + len" in acc simplifies to "S (plus n len)" immediately (how?).
+`sym (plusSuccRightSucc n len)` proves that "n+(S len) = S (n+len)", which can
+be used to rewrite the return type so that it's equal to the type of acc.
+-}
+reverseProof_xs : (acc : Vect ((S n) + len) a) -> Vect (plus n (S len)) a
+reverseProof_xs {n} {len} acc = rewrite sym (plusSuccRightSucc n len) in acc
+
+myReverse : Vect n a -> Vect n a
+myReverse xs = reverse' [] xs
+  where reverse' : Vect n a -> Vect m a -> Vect (n+m) a
+        reverse' acc [] = reverseProof_nil acc
+        reverse' acc (x :: xs) = reverseProof_xs (reverse' (x::acc) xs)
